@@ -8,18 +8,27 @@ import time
 import pandas as pd
 
 
-CASE=3
-
+CASE=4
 if CASE==0:
     from SAW_pivot_3D import Walk,repeat
+    output_filename = 'SAW_pivot_3D'+'.xlsx'
 elif CASE==1:
     from SAW_pivot_2D import Walk,repeat
+    output_filename = 'SAW_pivot_2D'+'.xlsx'
 elif CASE==2:
     from SAW_pivot_spherical_surface import Walk, R, repeat
-else:
+    output_filename = 'SAW_pivot_spherical_surface_R='+ str(R)+'_'+str(repeat)+'.xlsx'
+elif CASE==3:
     from SAW_pivot_spherical_interior import Walk, R, repeat
+    output_filename = 'SAW_pivot_spherical_interior_R='+ str(R)+'_'+str(repeat)+'.xlsx'
+elif CASE==4:
+    from SAW_pivot_spherical_surface_partialconfinement import Walk, R, repeat,n_part, I_ss
+    output_filename = 'SAW_pivot_spherical_surface_R='+ str(R)+'_n='+ str(n_part)+'_'+str(repeat)+'.xlsx'
+else:
+    from SAW_pivot_spherical_interior_partialconfinement import Walk, R, repeat, n_part, I_ss 
+    output_filename = 'SAW_pivot_spherical_interior_R='+ str(R)+'_n='+ str(n_part)+'_'+str(repeat)+'.xlsx'
 
-
+print(output_filename)
 # Get dimensions from Walk array
 N_step = Walk.shape[0]
 N_run = Walk.shape[2]
@@ -55,20 +64,20 @@ plt.tick_params(axis='both', which='major', labelsize=15)
 plt.show()
 
 # 3D plot of walks
-for j in [0, N_run-1]:
+for j in [0, N_run//2, N_run-1]:
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
-    ax.scatter(Walk[:, 0, j], Walk[:, 1, j], Walk[:, 2, j], s=15, marker='.')
-            
-    # Create sphere
-    u = np.linspace(0, 2 * np.pi, 30)
-    v = np.linspace(0, np.pi, 30)
-    x = R * np.outer(np.cos(u), np.sin(v))
-    y = R * np.outer(np.sin(u), np.sin(v))
-    z = R * np.outer(np.ones(30), np.cos(v))
-    
-    ax.plot_surface(x, y, z, alpha=0.5, shade=True)
-    ax.set_aspect('equal')
+    ax.plot3D(Walk[:, 0, j], Walk[:, 1, j], Walk[:, 2, j], '-ob', markersize=8, linewidth=3)
+    ax.plot3D(Walk[I_ss-1, 0, j], Walk[I_ss-1, 1, j], Walk[I_ss-1, 2, j], 'or', markersize=8, linewidth=3)
+    if CASE>1:        
+        # Create sphere
+        u = np.linspace(0, 2 * np.pi, 30)
+        v = np.linspace(0, np.pi, 30)
+        x = R * np.outer(np.cos(u), np.sin(v))
+        y = R * np.outer(np.sin(u), np.sin(v))
+        z = R * np.outer(np.ones(30), np.cos(v))       
+        ax.plot_surface(x, y, z, alpha=0.5, shade=True)
+        ax.set_aspect('equal')
     
     ax.set_xlabel('x')
     ax.set_ylabel('y')
@@ -110,6 +119,21 @@ plt.tick_params(axis='both', which='major', labelsize=15)
 plt.tight_layout()
 plt.show()
 plt.xlim([1,300])
+
+plt.figure(figsize=(8, 6))
+plt.plot(CL, L_3d, 'o', markersize=10)
+X = np.arange(1, np.max(CL)+1)
+Y = np.exp(coef[0] * np.log(X) + coef[1])
+plt.plot(X, Y, '-r', linewidth=2)
+# Add labels and legend
+plt.xlabel('contour length', fontsize=15)
+plt.ylabel('3d space distance', fontsize=15)
+plt.legend(['simulation', f'd∝L$^{{{coef[0]:.3f}}}$'], fontsize=15)
+# Set tick font size
+plt.tick_params(axis='both', which='major', labelsize=15)
+plt.tight_layout()
+plt.show()
+plt.xlim([1,300])
 #plt.ylim([1,300])
 print(f"Time elapsed: {time.time() - start_time:.2f} seconds")
 
@@ -133,7 +157,7 @@ for s in range(len(T)):
 print(f"Time elapsed: {time.time() - start_time:.2f} seconds")
 
 # Save to Excel
-output_filename = 'SAW_pivot_spherical_interior_R='+ str(R)+'_'+str(repeat)+'.xlsx'
+
 with pd.ExcelWriter(output_filename) as writer:
     pd.DataFrame({'CL': CL, 'L_3d': L_3d}).to_excel(writer, sheet_name='CL_EEDistance', index=False)
     pd.DataFrame({'T': T, 'MSD': MSD}).to_excel(writer, sheet_name='T_MSD', index=False)
