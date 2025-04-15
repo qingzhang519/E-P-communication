@@ -6,4 +6,4 @@ To simulate various scenarios of enhancer(E)-promoter(P) communication mediated 
 - "SAW_pivot_spherical_interior.py" contains the Python code for simulating the SAW of a polymer chain inside a sphere.
 - "SAW_pivot_spherical_surface_partialconfinement.py" contains the Python code for simulating the SAW of a polymer chain that is partially confined on a sphere's surface.     
 - "SAW_pivot_spherical_interior_partialconfinement.py" contains Python code for simulating the SAW of a polymer chain that is partially confined inside a sphere.
-- "Walk_analysis.py" contains the Python code for analyzing the SAW trajectory of the polymer chain and saving data such as contour length and average end-to-end distance (EED). Note that the figures included are for testing purposes.
+- "Walk_analysis.py" contains the Python code for analyzing the SAW trajectory of the polymer chain and saving data such as contour length, average end-to-end distance (EED), and probability distribution of EED. Note that the figures included are for testing purposes.
