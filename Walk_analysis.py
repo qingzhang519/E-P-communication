@@ -7,8 +7,7 @@ import matplotlib.pyplot as plt
 import time
 import pandas as pd
 
-
-CASE=4
+CASE=0
 if CASE==0:
     from SAW_pivot_3D import Walk,repeat
     output_filename = 'SAW_pivot_3D'+'.xlsx'
@@ -68,8 +67,8 @@ for j in [0, N_run//2, N_run-1]:
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     ax.plot3D(Walk[:, 0, j], Walk[:, 1, j], Walk[:, 2, j], '-ob', markersize=8, linewidth=3)
-    ax.plot3D(Walk[I_ss-1, 0, j], Walk[I_ss-1, 1, j], Walk[I_ss-1, 2, j], 'or', markersize=8, linewidth=3)
-    if CASE>1:        
+    if CASE>1:       
+        ax.plot3D(Walk[I_ss-1, 0, j], Walk[I_ss-1, 1, j], Walk[I_ss-1, 2, j], 'or', markersize=8, linewidth=3)     
         # Create sphere
         u = np.linspace(0, 2 * np.pi, 30)
         v = np.linspace(0, np.pi, 30)
@@ -92,6 +91,9 @@ L_3d = np.zeros(N_step - 2*b - 1)
 n2 = Walk.shape[1]
 n3 = Walk.shape[2]
 m = min(50000,n3)
+CL_select=[150,300]  # select contour lengths for EED distribution calculation
+X_EEDdis=[None]*len(CL_select)
+PX_EEDdis=[None]*len(CL_select)
 for h in range(N_step - 2*b - 1):
     End2 = np.zeros((n2, m * (N_step - h - 2*b)))
     for i in range(b, N_step - h - b):
@@ -100,8 +102,22 @@ for h in range(N_step - 2*b - 1):
         End2[:, start_idx:end_idx] = Walk[h+i, :, -m:] - Walk[i, :, -m:]
     
     R_end = np.sqrt(np.sum(End2**2, axis=0))
+    
+    # for average EED
     L_3d[h] = np.mean(R_end)
     CL[h] = h + 1 
+    # for EED distribution
+    for i in range(len(CL_select)):
+        if CL_select[i]==h+1:    
+            max_R_end = np.max(R_end)
+            bin_width = max_R_end / 50
+            bins = np.arange(0, max_R_end + 10*bin_width, bin_width)
+            fx, x = np.histogram(R_end, bins=bins)
+            px = fx / np.sum(fx) / np.diff(bins[:2])[0]
+            X_EEDdis[i]= x[0:-1]+bin_width/2
+            PX_EEDdis[i]= px        
+print(f"Time elapsed: {time.time() - start_time:.2f} seconds")
+            
 # Create the log-log plot of average EED vs. contour length
 plt.figure(figsize=(8, 6))
 plt.loglog(CL, L_3d, 'o', markersize=10)
@@ -135,33 +151,52 @@ plt.tight_layout()
 plt.show()
 plt.xlim([1,300])
 #plt.ylim([1,300])
-print(f"Time elapsed: {time.time() - start_time:.2f} seconds")
 
 # MSD vs time
 print('MSD')
 start_time = time.time()
 End = Walk[-1, :, :] - Walk[0, :, :]
 End2 = End.reshape(End.shape[0], End.shape[1])
-
 if N_run >= 2e5:
     End2 = End2[:, 1000:]  # Remove early 1000 points
-
 T = np.arange(0, 501, 5)
 MSD = np.zeros(len(T))
-
 for s in range(len(T)):
     t_val = T[s]
     End3 = End2[:, t_val:] - End2[:, :-t_val if t_val != 0 else None]
     MSD[s] = np.sum(np.sum(End3**2, axis=0)) / (End2.shape[1] - t_val)
-
 print(f"Time elapsed: {time.time() - start_time:.2f} seconds")
 
+mstr=['bo-','r^-','gsquare-','y<-','c>-','mdiamond-','k*-']
+plt.figure(figsize=(8, 6))  # You can adjust the figure size as needed
+ax = plt.gca()
+ax.set_position([0.2, 0.2, 0.65, 0.7])
+p_max=0
+for i in range(len(CL_select)):
+    if p_max<max(PX_EEDdis[i]):
+       p_max=max(PX_EEDdis[i])
+    marker_style = mstr[i]
+    ax.plot(X_EEDdis[i], PX_EEDdis[i], 
+                   marker=marker_style[1:-1],
+                   color=marker_style[0],
+                   markersize=8,
+                   markerfacecolor='w',
+                   linewidth=1.5)
+ax.set_ylim([0, p_max*1.2])
+ax.set_xlabel('End-to-end distance r',fontsize=15)
+ax.set_ylabel('Probability density',fontsize=15)
+ax.tick_params(axis='both', which='major', labelsize=15)
+ax.tick_params(width=1.5)
+
+# Show the plot
+plt.show()
 # Save to Excel
 
 with pd.ExcelWriter(output_filename) as writer:
     pd.DataFrame({'CL': CL, 'L_3d': L_3d}).to_excel(writer, sheet_name='CL_EEDistance', index=False)
     pd.DataFrame({'T': T, 'MSD': MSD}).to_excel(writer, sheet_name='T_MSD', index=False)
     pd.DataFrame({'Dis_t': Dis_t, 'Rg': Rg}).to_excel(writer, sheet_name='T_EEDis_Rg', index=False)
-
+    for i in range(len(CL_select)):
+        pd.DataFrame({'bins': X_EEDdis[i], 'Prob.': PX_EEDdis[i]}).to_excel(writer, sheet_name='EEDdistribution_CL='+str(CL_select[i]), index=False)
 # Clear Walk array if needed
 # del Walk    
