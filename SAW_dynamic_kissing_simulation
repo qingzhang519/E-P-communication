@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Wed Apr 16 17:21:27 2025
-
-@author: Administrator
+The simulation for E-P dynamic kissing model. 
 """
 globals().clear() 
 import numpy as np
