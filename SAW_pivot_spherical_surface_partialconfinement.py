@@ -4,12 +4,10 @@
 """
 import numpy as np
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 import time
 import math
 
 # Simulation parameters
-
 r = 1
 R = 10000  # Spherical radius [20, 40, 100, 10000]
 N_run = int(2e+5)  
@@ -17,15 +15,7 @@ N_step = 401
 Walk = np.zeros((N_step, 3, N_run),dtype=np.float64)
 n_part=40   # [4 10 20 40 100 200 400]
 
-## for figure 6
-# N_step = 397 
-# Walk = np.zeros((N_step, 3, N_run),dtype=np.float64)
-# gc = 12.5  # See figure 9 (b)
-# nu = 0.68  # Based on log(d_EP)/log(CL_EP)
-# g = round((0.75 - nu) * gc / (nu - 0.6))
-# n_part = int(np.floor(N_step / g))
-
-n_step = int(np.floor((N_step - 1) / n_part) + 1)  # n_step = g + 1
+n_step = int(np.floor((N_step - 1) / n_part) + 1)  
 I_ss = np.array([(i * (n_step - 1) + 1) for i in range(n_part + 1)]) # note that I_ss starts from 1
 
 print(I_ss)
@@ -158,7 +148,7 @@ Phi = np.random.rand(N_run) * 2 * np.pi
 S = np.floor(N_step * np.random.rand(N_run)).astype(int) + 1  # start from 1
 LR = np.random.rand(N_run) * 2
 
-for i in range(1, N_run):
+for i in range(1,N_run):#  range(1, N_run):
     s = S[i] # start from 1
     Walk[:, :, i] = Walk[:, :, i-1].copy()
     phi = Phi[i]
@@ -279,7 +269,7 @@ for i in range(1, N_run):
         B0 = np.array([0, 0, 0],dtype=np.float64)
         C0 = Walk[i_right-1, :, i]  # Changed right confined site
         
-        if abs(np.sqrt(np.sum(C0**2)) - R)/R < 1e-9:
+        if abs(np.sqrt(np.sum(C0**2)) - R)/R < 1e-9: # if the moved right end leaves a distance from the spherical surface   
             Walk[I-1, :, i] = Walk[I-1, :, i-1]
             continue
             
@@ -323,17 +313,22 @@ for i in range(1, N_run):
         
         Xd2 = Xd @ Rz_phi1 @ Ry_theta1 @ Rz_phi @ Ry_theta1.T @ Rz_phi1.T + walk0
         
-        if abs(np.sqrt(np.sum(Xd2[-1, :]**2)) - R)/R > 1e-6:
+        if abs(np.sqrt(np.sum(Xd2[-1, :]**2)) - R)/R > 1e-9:    
             Xd2_2 = Xd @ Rz_phi1 @ Ry_theta1 @ Rz_phi.T @ Ry_theta1.T @ Rz_phi1.T + walk0
-            if abs(np.linalg.norm(Xd2_2[-1, :]) - R)/R < abs(np.linalg.norm(Xd2[-1, :]) - R)/R:
+            if abs(np.linalg.norm(Xd2_2[-1, :]) - R) < abs(np.linalg.norm(Xd2[-1, :]) - R):
                 Xd2 = Xd2_2
+            else:
+                Walk[s-1:i_right, :, i]= Walk[s-1:i_right, :, i-1]
+                continue
                 
         flag = True
         J = np.arange(1, i_left)
         for j in J:
             if np.min(np.sum((Walk[j-1, :, i] - Xd2)**2, axis=1)) < r**2:
                 flag = False
-                Walk[s:i_right, :, i] = Walk[s:i_right, :, i-1]
+                # Walk[s:i_right, :, i] = Walk[s:i_right, :, i-1]
+                Walk[s-1:i_right, :, i] = Walk[s-1:i_right, :, i-1]  
+                # In theory, Walk[s-1, :, i] should remain unchanged; however, numerical precision in the simulation may introduce minor variations.  
                 break
                 
         if flag:
@@ -352,7 +347,9 @@ for i in range(1, N_run):
         B = B0 - walk0
         C = C0 - walk0
         
-        if np.linalg.norm(B-C) < 1e-6:
+        ####
+        # Once the right end is back in its original position, no further adjustment is needed.
+        if np.linalg.norm(B-C) < 1e-4:
             I = np.arange(i_right+1, N_step+1)
             Xd = Walk[i_right:, :, i] - walk0  # Beads to rotate
             flag = True
@@ -363,15 +360,14 @@ for i in range(1, N_run):
                     Walk[i_left-1:i_right, :, i] = Walk[i_left-1:i_right, :, i-1]
                     break
             continue
-            
+        ####   
         D = np.array([1, 0, 0],dtype=np.float64)
         D_23 = -np.linalg.inv(np.vstack([B[1:3], C[1:3]])) @ np.array([B[0], C[0]])
         D[1:3] = D_23.T
         
         A1 = D  # Rotation axis
         Xd = Walk[i_right:, :, i] - walk0  # Beads to rotate
-        
-                        
+                               
         I = np.arange(i_right+1, N_step+1)
         
         x_arccos=np.dot(B-A, C-A)/R**2
@@ -404,11 +400,12 @@ for i in range(1, N_run):
         Xd2 = Xd @ Rz_phi1 @ Ry_theta1 @ Rz_phi @ Ry_theta1.T @ Rz_phi1.T + walk0
         
 
-        if np.sqrt(np.sum((Xd2[0, :] - Walk[i_right-1, :, i])**2)) > r + 1e-5:
+        # if np.sqrt(np.sum((Xd2[0, :] - Walk[i_right-1, :, i])**2)) > r + 1e-5:
+        if np.sqrt(np.sum((Xd2[0, :] - Walk[i_right-1, :, i])**2)) > r + 1e-9:    
             Xd2_2 = Xd @ Rz_phi1 @ Ry_theta1 @ Rz_phi.T @ Ry_theta1.T @ Rz_phi1.T + walk0
             if np.linalg.norm(Xd2_2[0, :] - Walk[i_right-1, :, i]) < np.linalg.norm(Xd2[0, :] - Walk[i_right-1, :, i]):
                 Xd2 = Xd2_2
-            else:  ######
+            else:  
                 Walk[i_left-1:i_right, :, i] = Walk[i_left-1:i_right, :, i-1]
                 continue
                 
@@ -430,15 +427,21 @@ time_cost=end_time-start_time
 print('Random walks have been over!')
 print("Elapsed Time:", time_cost)
 
-
-
 # test the chain's connectivity
-flag=1
-for i in range(N_step-1):
-    d=np.sqrt(sum((Walk[i,:,-1]-Walk[i+1,:,-1])**2)) 
+i0= N_run-1
+for s in range(N_step-1):
+    d=np.sqrt(sum((Walk[s,:,i0]-Walk[s+1,:,i0])**2)) 
     if abs(d-1)>1e-4:
-       print(i)
-       print(d)
+       print('Be cautious with the chain connectivity.')
+       print(s)
+       print('d='+str(d))
+# test if the confined beads are on the sphere's surface  
+for s in I_ss:       
+    d2=abs(np.sqrt(sum((Walk[s-1,:,i0])**2))-R)/R 
+    if d2>1e-9:
+        print('Be cautious with the spherical confinement.')
+        print(s)
+        print('d2='+str(d2))
 
 # Plot the last conformation
 fig = plt.figure()
