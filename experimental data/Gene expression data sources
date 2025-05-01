@@ -1,0 +1,10 @@
+The data of gene expression vs contour length (contact probability) from the literature [1,2] are avaiable to test the dynamic kissing model for E-P communication. 
+
+[1] N. Hao, K. E. Shearwin, and I. B. Dodd, Positive and negative
+control of enhancer-promoter interactions by other DNA loops
+generates specificity and tunability, Cell Rep. 26, 2419 (2019).
+[2] J. Zuin, G. Roth, Y. Zhan, J. Cramard, J. Redolfi, E. Piskadlo,
+P. Mach, M. Kryzhanovska, G. Tihanyi, H. Kohler, M. Eder,
+C. Leemans, B. van Steensel, P. Meister, S. Smallwood, and L.
+Giorgetti, Nonlinear control of transcription through enhancerpromoter
+interactions, Nature (London) 604, 571 (2022).
